@@ -201,8 +201,8 @@ impl ColorMode {
 
     fn raw_size_opt(&self, w: u32, h: u32) -> Option<usize> {
         let bpp = self.bpp() as usize;
-        let n = (w as usize).checked_mul(h as usize)?;
-        (n / 8).checked_mul(bpp)?.checked_add(((n & 7) * bpp + 7) / 8)
+        let line = (w as u64).checked_mul(bpp as u64)?.checked_add(7)? / 8;
+        (h as usize).checked_mul(usize::try_from(line).ok()?)
     }
 
     /*in an idat chunk, each scanline is a multiple of 8 bits, unlike the lodepng output buffer*/
@@ -974,7 +974,7 @@ pub fn decode24_file<P: AsRef<Path>>(filepath: P) -> Result<Bitmap<RGB<u8>>, Err
 }
 
 fn buffer_for_type<PixelType: rgb::Pod>(image: &[PixelType], w: usize, h: usize, colortype: ColorType, bitdepth: u32) -> Result<&[u8], Error> {
-    let bytes_per_pixel = bitdepth as usize/8;
+    let bytes_per_pixel = (bitdepth as usize/8).max(1);
     assert!(mem::size_of::<PixelType>() <= 4*bytes_per_pixel, "Implausibly large {}-byte pixel data type", mem::size_of::<PixelType>());
 
     let px_bytes = mem::size_of::<PixelType>();
